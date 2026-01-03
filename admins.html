@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Администраторы - Админ-панель{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-person-badge"></i>
+        Управление администраторами
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('settings') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад
+        </a>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">
+            Список администраторов ({{ admins|length }})
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="adminsTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>ID</th>
+                        <th>Пользователь</th>
+                        <th>Роль</th>
+                        <th>Пароль</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for admin in admins %}
+                    <tr>
+                        <td>{{ admin.admin_number }}</td>
+                        <td><code>{{ admin.id }}</code></td>
+                        <td>
+                            <strong>{{ admin.full_name }}</strong><br>
+                            <small class="text-muted">@{{ admin.username }}</small>
+                        </td>
+                        <td>
+                            {% if admin.is_owner %}
+                                <span class="badge bg-danger">👑 ВЛАДЕЛЕЦ</span>
+                            {% else %}
+                                <span class="badge bg-primary">👮 АДМИНИСТРАТОР</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <code class="admin-password" id="password-{{ admin.id }}">
+                                {{ admin.password }}
+                            </code>
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-2"
+                                    onclick="copyPassword('{{ admin.id }}')">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </td>
+                        <td>
+                            {% if admin.can_remove %}
+                            <button type="button" class="btn btn-sm btn-danger"
+                                    onclick="removeAdmin({{ admin.id }})">
+                                <i class="bi bi-person-x"></i> Удалить
+                            </button>
+                            {% else %}
+                            <span class="text-muted">Нельзя удалить</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="alert alert-info mt-3">
+            <i class="bi bi-info-circle"></i>
+            <strong>Внимание!</strong> Для добавления новых администраторов используйте команду в боте или свяжитесь с владельцем.
+        </div>
+    </div>
+</div>
+
+<script>
+    function copyPassword(adminId) {
+        const passwordElement = document.getElementById('password-' + adminId);
+        const password = passwordElement.textContent.trim();
+
+        navigator.clipboard.writeText(password).then(function() {
+            alert('Пароль скопирован в буфер обмена');
+        });
+    }
+
+    function removeAdmin(adminId) {
+        if (confirm(`Вы уверены, что хотите удалить администратора ${adminId}?`)) {
+            fetch('/remove_admin/' + adminId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Ошибка при удалении администратора');
+                console.error('Error:', error);
+            });
+        }
+    }
+</script>
+{% endblock %}

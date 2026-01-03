@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Поиск - Админ-панель{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Поиск</h1>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Поиск по базе данных</h6>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('search') }}">
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <input type="text" class="form-control" name="query" value="{{ query }}"
+                           placeholder="Введите поисковый запрос..." required>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <select class="form-select" name="type">
+                        <option value="messages" {% if search_type == 'messages' %}selected{% endif %}>Сообщения</option>
+                        <option value="users" {% if search_type == 'users' %}selected{% endif %}>Пользователи</option>
+                    </select>
+                </div>
+                <div class="col-md-1 mb-3">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        {% if query %}
+            <div class="mt-4">
+                <h5>Результаты поиска ({{ results|length }})</h5>
+
+                {% if search_type == 'messages' %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Дата</th>
+                                    <th>От кого</th>
+                                    <th>Кому</th>
+                                    <th>Сообщение</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for msg in results %}
+                                <tr>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ msg.date.split('T')[0] if msg.date else 'N/A' }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <code>{{ msg.from }}</code><br>
+                                        <small>
+                                            {% if msg.from|string in db.data.users %}
+                                                {{ db.data.users[msg.from|string].username|default('N/A') }}
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <code>{{ msg.to }}</code><br>
+                                        <small>
+                                            {% if msg.to|string in db.data.users %}
+                                                {{ db.data.users[msg.to|string].username|default('N/A') }}
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <div class="message-content">
+                                            {% if msg.content and msg.content != '[Медиа]' %}
+                                                {{ msg.content }}
+                                            {% else %}
+                                                <span class="text-muted">[Медиа-сообщение]</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="row">
+                        {% for user in results %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6>{{ user.full_name }}</h6>
+                                    <p class="text-muted mb-1">@{{ user.username }}</p>
+                                    <p class="mb-2"><code>{{ user.id }}</code></p>
+                                    <a href="{{ url_for('user_detail', user_id=user.id) }}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> Просмотреть
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if results|length == 0 %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-search display-4 text-muted"></i>
+                        <p class="mt-3 text-muted">Ничего не найдено</p>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

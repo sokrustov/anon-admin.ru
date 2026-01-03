@@ -1,0 +1,556 @@
+{% extends "base.html" %}
+
+{% block title %}{{ user.full_name }} - Админ-панель{% endblock %}
+
+{% block extra_css %}
+<style>
+    .modal-backdrop {
+        z-index: 1040 !important;
+    }
+    .modal {
+        z-index: 1050 !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-person-circle"></i>
+        {{ user.full_name }}
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('users') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Информация</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="user-avatar mx-auto" style="width: 80px; height: 80px; font-size: 2rem;">
+                        {{ user.full_name[0] if user.full_name else 'U' }}
+                    </div>
+                    <h5 class="mt-3">{{ user.full_name }}</h5>
+                    <p class="text-muted">@{{ user.username }}</p>
+                </div>
+
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>ID:</strong></td>
+                        <td><code>{{ user_id }}</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Регистрация:</strong></td>
+                        <td>{{ user.first_seen|replace('T', ' ') if user.first_seen else 'N/A' }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Отправлено:</strong></td>
+                        <td>{{ user.messages_sent }} сообщений</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Получено:</strong></td>
+                        <td>{{ user.messages_received }} сообщений</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Статусы</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="status-item mb-2">
+                        {% if is_admin %}
+                            <span class="badge badge-admin p-2 d-block mb-2">👑 АДМИНИСТРАТОР</span>
+                        {% else %}
+                            <span class="badge bg-secondary p-2 d-block mb-2">👤 ОБЫЧНЫЙ ПОЛЬЗОВАТЕЛЬ</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="status-item mb-2">
+                        {% if is_vip %}
+                            <span class="badge badge-vip p-2 d-block mb-2">
+                                💎 VIP ДО {{ vip_until.split('T')[0] if vip_until else 'N/A' }}
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary p-2 d-block mb-2">❌ БЕЗ VIP</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="status-item mb-2">
+                        {% if is_banned %}
+                            <span class="badge badge-banned p-2 d-block mb-2">🚫 ЗАБАНЕН</span>
+                        {% else %}
+                            <span class="badge bg-success p-2 d-block mb-2">✅ АКТИВЕН</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="status-item">
+                        {% if is_protected %}
+                            <span class="badge badge-protected p-2 d-block">🛡 ЗАЩИЩЁН</span>
+                        {% else %}
+                            <span class="badge bg-secondary p-2 d-block">🛡 НЕ ЗАЩИЩЁН</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Управление пользователем</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('manage_user', user_id=user_id) }}" id="userForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <h6><i class="bi bi-gem"></i> VIP Подписка</h6>
+                            {% if is_vip %}
+                                <button type="button" class="btn btn-warning btn-sm w-100 mb-2" data-bs-toggle="modal" data-bs-target="#removeVipModal">
+                                    <i class="bi bi-x-circle"></i> Удалить VIP
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn btn-primary btn-sm w-100 mb-2" data-bs-toggle="modal" data-bs-target="#addVipModal">
+                                    <i class="bi bi-plus-circle"></i> Выдать VIP
+                                </button>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <h6><i class="bi bi-lock"></i> Блокировка</h6>
+                            {% if is_banned %}
+                                <button type="button" class="btn btn-success btn-sm w-100 mb-2" data-bs-toggle="modal" data-bs-target="#unbanModal">
+                                    <i class="bi bi-unlock"></i> Разбанить
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn btn-danger btn-sm w-100 mb-2" data-bs-toggle="modal" data-bs-target="#banModal">
+                                    <i class="bi bi-lock"></i> Забанить
+                                </button>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <h6><i class="bi bi-shield-check"></i> Защита</h6>
+                            {% if is_protected %}
+                                <button type="button" class="btn btn-info btn-sm w-100 mb-2" data-bs-toggle="modal" data-bs-target="#removeProtectModal">
+                                    <i class="bi bi-shield-slash"></i> Снять защиту
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn btn-info btn-sm w-100 mb-2" data-bs-toggle="modal" data-bs-target="#addProtectModal">
+                                    <i class="bi bi-shield-check"></i> Защитить
+                                </button>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <h6><i class="bi bi-lightning"></i> Быстрые действия</h6>
+                            <div class="d-grid gap-2">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="copyToClipboard('{{ user_id }}')">
+                                    <i class="bi bi-clipboard"></i> Копировать ID
+                                </button>
+                                {% if user.username %}
+                                <a href="https://t.me/{{ user.username }}" target="_blank" class="btn btn-outline-success btn-sm">
+                                    <i class="bi bi-telegram"></i> Написать в TG
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="action" id="actionInput">
+                    <input type="hidden" name="days" id="daysInput">
+                    <input type="hidden" name="ban_reason" id="banReasonInput">
+                    <input type="hidden" name="unban_reason" id="unbanReasonInput">
+                    <input type="hidden" name="protect_reason" id="protectReasonInput">
+                    <input type="hidden" name="unprotect_reason" id="unprotectReasonInput">
+                    <input type="hidden" name="vip_reason" id="vipReasonInput">
+                    <input type="hidden" name="remove_vip_reason" id="removeVipReasonInput">
+                    <input type="hidden" name="ban_type" id="banTypeInput">
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">История действий</h6>
+                <span class="badge bg-primary">{{ user_history|length }} записей</span>
+            </div>
+            <div class="card-body">
+                {% if user_history|length > 0 %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Дата</th>
+                                    <th>Тип действия</th>
+                                    <th>Детали</th>
+                                    <th>Администратор</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for action in user_history|reverse %}
+                                <tr>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ action.timestamp.split('T')[0] }}<br>
+                                            {{ action.timestamp.split('T')[1][:5] }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {% if action.action_type == 'ban' %}
+                                            <span class="badge bg-danger">🚫 БАН</span>
+                                        {% elif action.action_type == 'unban' %}
+                                            <span class="badge bg-success">✅ РАЗБАН</span>
+                                        {% elif action.action_type == 'vip_add' %}
+                                            <span class="badge badge-vip">💎 VIP+</span>
+                                        {% elif action.action_type == 'vip_remove' %}
+                                            <span class="badge badge-vip">❌ VIP-</span>
+                                        {% elif action.action_type == 'protect_add' %}
+                                            <span class="badge badge-protected">🛡 ЗАЩИТА+</span>
+                                        {% elif action.action_type == 'protect_remove' %}
+                                            <span class="badge badge-protected">🛡 ЗАЩИТА-</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ action.action_type }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if action.action_type == 'ban' %}
+                                            <small>
+                                                Причина: {{ action.details.reason }}<br>
+                                                {% if action.details.until %}
+                                                    До: {{ action.details.until.split('T')[0] }}
+                                                {% else %}
+                                                    Навсегда
+                                                {% endif %}
+                                            </small>
+                                        {% elif action.action_type == 'unban' %}
+                                            <small>
+                                                Причина снятия: {{ action.details.reason|default('не указана') }}
+                                            </small>
+                                        {% elif action.action_type == 'vip_add' %}
+                                            <small>
+                                                На {{ action.details.days }} дней<br>
+                                                До: {{ action.details.until.split('T')[0] }}<br>
+                                                {% if action.details.reason %}
+                                                    Причина: {{ action.details.reason }}
+                                                {% endif %}
+                                            </small>
+                                        {% elif action.action_type == 'vip_remove' %}
+                                            <small>
+                                                Причина снятия: {{ action.details.reason|default('не указана') }}
+                                            </small>
+                                        {% elif action.action_type == 'protect_add' %}
+                                            <small>
+                                                {% if action.details.reason %}
+                                                    Причина: {{ action.details.reason }}
+                                                {% endif %}
+                                            </small>
+                                        {% elif action.action_type == 'protect_remove' %}
+                                            <small>
+                                                Причина снятия: {{ action.details.reason|default('не указана') }}
+                                            </small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>
+                                            {% if action.details.admin_id %}
+                                                {{ db.get_admin_number(action.details.admin_id) }}
+                                            {% else %}
+                                                Система
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-clock-history display-4 text-muted"></i>
+                        <p class="mt-3 text-muted">Нет записей в истории</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">История сообщений</h6>
+                <span class="badge bg-primary">{{ messages|length }} сообщений</span>
+            </div>
+            <div class="card-body">
+                {% if messages|length > 0 %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Дата</th>
+                                    <th>Тип</th>
+                                    <th>Сообщение</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for msg in messages %}
+                                <tr>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ msg.date.split('T')[0] if msg.date else 'N/A' }}<br>
+                                            {{ msg.date.split('T')[1][:5] if msg.date and 'T' in msg.date else '' }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {% if msg.from|string == user_id %}
+                                            <span class="badge bg-info">Исходящее</span><br>
+                                            <small>Кому: {{ msg.to }}</small>
+                                        {% else %}
+                                            <span class="badge bg-success">Входящее</span><br>
+                                            <small>От: {{ msg.from }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="message-content">
+                                            {% if msg.content and msg.content != '[Медиа]' %}
+                                                {{ msg.content|truncate(100) }}
+                                            {% else %}
+                                                <span class="text-muted">[Медиа-сообщение]</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-chat-left-text display-4 text-muted"></i>
+                        <p class="mt-3 text-muted">Нет сообщений</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальные окна -->
+<div class="modal fade" id="banModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Блокировка пользователя</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Тип блокировки</label>
+                    <select class="form-select" id="banTypeSelect">
+                        <option value="permanent">Навсегда</option>
+                        <option value="temporary">На время</option>
+                    </select>
+                </div>
+                <div class="mb-3" id="daysContainer" style="display: none;">
+                    <label class="form-label">Количество дней</label>
+                    <input type="number" class="form-control" id="daysValue" min="1" max="365" value="7">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Причина бана</label>
+                    <input type="text" class="form-control" id="banReason" placeholder="Введите причину бана" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-danger" onclick="submitBan()">Забанить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="unbanModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Разблокировка пользователя</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Причина разблокировки</label>
+                    <input type="text" class="form-control" id="unbanReason" placeholder="Введите причину разблокировки">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-success" onclick="submitUnban()">Разбанить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addProtectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Выдача защиты</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Причина выдачи защиты</label>
+                    <input type="text" class="form-control" id="protectReason" placeholder="Введите причину выдачи защиты">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-info" onclick="submitAddProtect()">Выдать защиту</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="removeProtectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Снятие защиты</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Причина снятия защиты</label>
+                    <input type="text" class="form-control" id="unprotectReason" placeholder="Введите причину снятия защиты">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-info" onclick="submitRemoveProtect()">Снять защиту</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addVipModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Выдача VIP подписки</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Количество дней</label>
+                    <input type="number" class="form-control" id="vipDays" min="1" value="7">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Причина выдачи VIP</label>
+                    <input type="text" class="form-control" id="vipReason" placeholder="Введите причину выдачи VIP">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" onclick="submitAddVip()">Выдать VIP</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="removeVipModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Снятие VIP подписки</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Причина снятия VIP</label>
+                    <input type="text" class="form-control" id="removeVipReason" placeholder="Введите причину снятия VIP">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-warning" onclick="submitRemoveVip()">Снять VIP</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(function() {
+            alert('ID скопирован в буфер обмена: ' + text);
+        });
+    }
+
+    document.getElementById('banTypeSelect').addEventListener('change', function() {
+        const daysContainer = document.getElementById('daysContainer');
+        if (this.value === 'temporary') {
+            daysContainer.style.display = 'block';
+        } else {
+            daysContainer.style.display = 'none';
+        }
+    });
+
+    function submitBan() {
+        const form = document.getElementById('userForm');
+        form.actionInput.value = 'ban';
+        form.daysInput.value = document.getElementById('daysValue').value;
+        form.banReasonInput.value = document.getElementById('banReason').value;
+        form.banTypeInput.value = document.getElementById('banTypeSelect').value;
+
+        if (!form.banReasonInput.value) {
+            alert('Введите причину бана');
+            return;
+        }
+
+        form.submit();
+    }
+
+    function submitUnban() {
+        const form = document.getElementById('userForm');
+        form.actionInput.value = 'unban';
+        form.unbanReasonInput.value = document.getElementById('unbanReason').value;
+        form.submit();
+    }
+
+    function submitAddProtect() {
+        const form = document.getElementById('userForm');
+        form.actionInput.value = 'protect';
+        form.protectReasonInput.value = document.getElementById('protectReason').value;
+        form.submit();
+    }
+
+    function submitRemoveProtect() {
+        const form = document.getElementById('userForm');
+        form.actionInput.value = 'unprotect';
+        form.unprotectReasonInput.value = document.getElementById('unprotectReason').value;
+        form.submit();
+    }
+
+    function submitAddVip() {
+        const form = document.getElementById('userForm');
+        form.actionInput.value = 'add_vip';
+        form.daysInput.value = document.getElementById('vipDays').value;
+        form.vipReasonInput.value = document.getElementById('vipReason').value;
+        form.submit();
+    }
+
+    function submitRemoveVip() {
+        const form = document.getElementById('userForm');
+        form.actionInput.value = 'remove_vip';
+        form.removeVipReasonInput.value = document.getElementById('removeVipReason').value;
+        form.submit();
+    }
+</script>
+{% endblock %}

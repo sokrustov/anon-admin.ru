@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Рассылка - Админ-панель{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Рассылка сообщений</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <span class="badge bg-primary">{{ db.data.users|length }} получателей</span>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Создание рассылки</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('broadcast') }}">
+                    <div class="mb-3">
+                        <label for="message" class="form-label">Текст сообщения</label>
+                        <textarea class="form-control" id="message" name="message" rows="10"
+                                  placeholder="Введите текст для рассылки..." required></textarea>
+                        <div class="form-text">
+                            Поддерживается HTML разметка. Максимальная длина: 4096 символов.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Получатели</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="recipients" id="all" value="all" checked>
+                            <label class="form-check-label" for="all">
+                                Все пользователи ({{ db.data.users|length }} чел.)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="recipients" id="vip" value="vip">
+                            <label class="form-check-label" for="vip">
+                                Только VIP пользователи ({{ db.data.subscriptions|length }} чел.)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="recipients" id="active" value="active">
+                            <label class="form-check-label" for="active">
+                                Активные пользователи (отправляли сообщения)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="button" class="btn btn-secondary" onclick="previewMessage()">
+                            <i class="bi bi-eye"></i> Предпросмотр
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send"></i> Отправить рассылку
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Статистика</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        Всего пользователей
+                        <span class="badge bg-primary rounded-pill">{{ db.data.users|length }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        VIP пользователей
+                        <span class="badge bg-warning rounded-pill">{{ db.data.subscriptions|length }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        Забанено
+                        <span class="badge bg-danger rounded-pill">{{ db.data.banned|length }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        Защищённых
+                        <span class="badge bg-info rounded-pill">{{ db.data.protected_users|length }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Предыдущие рассылки</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    История рассылок будет доступна в будущих версиях.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно предпросмотра -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Предпросмотр сообщения</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="card">
+                    <div class="card-header">
+                        <strong>Сообщение в Telegram</strong>
+                    </div>
+                    <div class="card-body" id="previewContent">
+                        <!-- Сюда будет вставлен предпросмотр -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function previewMessage() {
+        const message = document.getElementById('message').value;
+        if (!message.trim()) {
+            alert('Введите текст сообщения для предпросмотра');
+            return;
+        }
+
+        // Очищаем и добавляем предпросмотр
+        const previewContent = document.getElementById('previewContent');
+        previewContent.innerHTML = message.replace(/\n/g, '<br>');
+
+        // Показываем модальное окно
+        const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+        modal.show();
+    }
+</script>
+{% endblock %}

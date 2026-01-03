@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Пользователи - Админ-панель{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Пользователи</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <span class="badge bg-primary">{{ users|length }} пользователей</span>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Список пользователей</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="usersTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Пользователь</th>
+                        <th>Дата регистрации</th>
+                        <th>Статистика</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td><code>{{ user.id }}</code></td>
+                        <td>
+                            <strong>{{ user.full_name }}</strong><br>
+                            <small class="text-muted">@{{ user.username }}</small>
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                {{ user.first_seen|replace('T', ' ') if user.first_seen else 'N/A' }}
+                            </small>
+                        </td>
+                        <td>
+                            <small>
+                                📤 {{ user.messages_sent }}<br>
+                                📥 {{ user.messages_received }}
+                            </small>
+                        </td>
+                        <td>
+                            {% if user.is_vip %}
+                                <span class="badge badge-vip">VIP</span><br>
+                            {% endif %}
+                            {% if user.is_banned %}
+                                <span class="badge badge-banned">БАН</span><br>
+                            {% endif %}
+                            {% if user.is_protected %}
+                                <span class="badge badge-protected">ЗАЩ</span><br>
+                            {% endif %}
+                            {% if user.is_admin %}
+                                <span class="badge badge-admin">АДМ</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('user_detail', user_id=user.id) }}"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> Подробнее
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if users|length == 0 %}
+            <div class="text-center py-5">
+                <i class="bi bi-people display-4 text-muted"></i>
+                <p class="mt-3 text-muted">Нет пользователей</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Сообщения - Админ-панель{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Сообщения</h1>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">
+            Все сообщения ({{ messages|length }})
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="messagesTable">
+                <thead>
+                    <tr>
+                        <th>Дата</th>
+                        <th>От кого</th>
+                        <th>Кому</th>
+                        <th>Сообщение</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for msg in messages %}
+                    <tr>
+                        <td>
+                            <small class="text-muted">
+                                {% if msg.date %}
+                                    {{ msg.date.split('T')[0] }}<br>
+                                    {{ msg.date.split('T')[1][:8] }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </small>
+                        </td>
+                        <td>
+                            <code>{{ msg.from }}</code><br>
+                            <small class="text-muted">
+                                {% set from_user = db.get_user_info(msg.from|string) %}
+                                {% if from_user and from_user.username %}
+                                    @{{ from_user.username }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </small>
+                        </td>
+                        <td>
+                            <code>{{ msg.to }}</code><br>
+                            <small class="text-muted">
+                                {% set to_user = db.get_user_info(msg.to|string) %}
+                                {% if to_user and to_user.username %}
+                                    @{{ to_user.username }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </small>
+                        </td>
+                        <td>
+                            <div class="message-content">
+                                {% if msg.content and msg.content != '[Медиа]' %}
+                                    {{ msg.content|truncate(100) }}
+                                {% else %}
+                                    <span class="text-muted">[Медиа-сообщение]</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if messages|length == 0 %}
+            <div class="text-center py-5">
+                <i class="bi bi-chat-left-text display-4 text-muted"></i>
+                <p class="mt-3 text-muted">Нет сообщений</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
